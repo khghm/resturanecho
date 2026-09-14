@@ -70,9 +70,9 @@ export function RestaurantPage({ navigate }: RestaurantPageProps) {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 lg:px-16">
       {/* Header */}
-      <header className="sticky top-0 z-40 bg-white/90 backdrop-blur-md shadow-sm">
+      <header className="sticky top-16 z-40 bg-white/90 backdrop-blur-md shadow-sm">
         <div className="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between">
           <button onClick={() => navigate('customer')} className="p-2 hover:bg-gray-100 rounded-xl">
             <ArrowRight className="w-5 h-5" />

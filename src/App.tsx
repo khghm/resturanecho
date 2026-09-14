@@ -19,23 +19,22 @@ export default function App() {
   return (
     <AppProvider>
       <div className="min-h-screen bg-white font-vazir relative">
-        {/* Persian Side Borders */}
-        <PersianSideBorder position="right" />
-        <PersianSideBorder position="left" />
+        {/* Persian Borders - Only for non-admin pages */}
+        {currentView !== 'admin' && (
+          <>
+            <PersianSideBorder position="right" />
+            <PersianSideBorder position="left" />
+            <PersianBorder position="top" />
+            <PersianBorder position="bottom" />
+          </>
+        )}
         
         {/* Main Content */}
         <div className="relative z-10">
-          {/* Top Persian Border */}
-          <PersianBorder position="top" />
-          
-          {/* Page Content */}
           {currentView === 'landing' && <LandingPage navigate={navigate} />}
           {currentView === 'customer' && <CustomerApp navigate={navigate} />}
           {currentView === 'admin' && <AdminDashboard navigate={navigate} />}
           {currentView === 'restaurant' && <RestaurantPage navigate={navigate} />}
-          
-          {/* Bottom Persian Border */}
-          <PersianBorder position="bottom" />
         </div>
       </div>
     </AppProvider>

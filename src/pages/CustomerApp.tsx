@@ -94,9 +94,9 @@ export function CustomerApp({ navigate }: CustomerAppProps) {
   });
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-20">
+    <div className="min-h-screen bg-gray-50 pb-20 lg:px-16">
       {/* Header */}
-      <header className="sticky top-0 z-40 bg-white/90 backdrop-blur-md shadow-sm">
+      <header className="sticky top-16 z-40 bg-white/90 backdrop-blur-md shadow-sm">
         <div className="max-w-lg mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <div className="w-9 h-9 bg-gradient-to-br from-primary to-accent rounded-xl flex items-center justify-center shadow-md">

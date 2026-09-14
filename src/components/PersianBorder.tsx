@@ -5,20 +5,29 @@ export function PersianBorder({ position = 'top' }: { position?: 'top' | 'bottom
     return (
       <>
         <div 
-          className="w-full h-20 bg-cover bg-repeat-x"
+          className="fixed top-0 left-0 right-0 h-16 bg-cover bg-repeat-x z-[5] pointer-events-none"
           style={{ backgroundImage: `url(${tileImage})` }}
         />
         <div 
-          className="w-full h-20 bg-cover bg-repeat-x rotate-180 mt-auto"
+          className="fixed bottom-0 left-0 right-0 h-16 bg-cover bg-repeat-x rotate-180 z-[5] pointer-events-none"
           style={{ backgroundImage: `url(${tileImage})` }}
         />
       </>
     );
   }
 
+  if (position === 'top') {
+    return (
+      <div 
+        className="fixed top-0 left-0 right-0 h-16 bg-cover bg-repeat-x z-[5] pointer-events-none"
+        style={{ backgroundImage: `url(${tileImage})` }}
+      />
+    );
+  }
+
   return (
     <div 
-      className={`w-full h-20 bg-cover bg-repeat-x ${position === 'bottom' ? 'rotate-180' : ''}`}
+      className="fixed bottom-0 left-0 right-0 h-16 bg-cover bg-repeat-x rotate-180 z-[5] pointer-events-none"
       style={{ backgroundImage: `url(${tileImage})` }}
     />
   );
@@ -29,7 +38,7 @@ export function PersianSideBorder({ position = 'right' }: { position?: 'right' |
 
   return (
     <div 
-      className={`hidden lg:block fixed top-0 ${position === 'right' ? 'right-0' : 'left-0'} h-full w-16 z-30 pointer-events-none bg-cover bg-repeat-y`}
+      className={`hidden lg:block fixed top-0 ${position === 'right' ? 'right-0' : 'left-0'} h-full w-16 z-[5] pointer-events-none bg-cover bg-repeat-y`}
       style={{ backgroundImage: `url(${sideTileImage})` }}
     />
   );
