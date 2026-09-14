@@ -4,7 +4,7 @@ import { LandingPage } from './pages/Landing';
 import { CustomerApp } from './pages/CustomerApp';
 import { AdminDashboard } from './pages/AdminDashboard';
 import { RestaurantPage } from './pages/RestaurantPage';
-import { PersianBorder, PersianSideBorder } from './components/PersianBorder';
+import { PersianBorder } from './components/PersianBorder';
 
 export type AppView = 'landing' | 'customer' | 'admin' | 'restaurant';
 
@@ -18,25 +18,18 @@ export default function App() {
 
   return (
     <AppProvider>
-      <div className="min-h-screen bg-white font-vazir relative">
-        {/* Persian Side Borders */}
-        <PersianSideBorder position="right" />
-        <PersianSideBorder position="left" />
+      <div className="min-h-screen bg-white font-vazir">
+        {/* Top Persian Border */}
+        <PersianBorder position="top" />
         
-        {/* Main Content */}
-        <div className="relative z-10">
-          {/* Top Persian Border */}
-          <PersianBorder position="top" variant="royal" />
-          
-          {/* Page Content */}
-          {currentView === 'landing' && <LandingPage navigate={navigate} />}
-          {currentView === 'customer' && <CustomerApp navigate={navigate} />}
-          {currentView === 'admin' && <AdminDashboard navigate={navigate} />}
-          {currentView === 'restaurant' && <RestaurantPage navigate={navigate} />}
-          
-          {/* Bottom Persian Border */}
-          <PersianBorder position="bottom" variant="royal" />
-        </div>
+        {/* Page Content */}
+        {currentView === 'landing' && <LandingPage navigate={navigate} />}
+        {currentView === 'customer' && <CustomerApp navigate={navigate} />}
+        {currentView === 'admin' && <AdminDashboard navigate={navigate} />}
+        {currentView === 'restaurant' && <RestaurantPage navigate={navigate} />}
+        
+        {/* Bottom Persian Border */}
+        <PersianBorder position="bottom" />
       </div>
     </AppProvider>
   );
