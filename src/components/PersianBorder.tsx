@@ -24,4 +24,15 @@ export function PersianBorder({ position = 'top' }: { position?: 'top' | 'bottom
   );
 }
 
+export function PersianSideBorder({ position = 'right' }: { position?: 'right' | 'left' }) {
+  const sideTileImage = "https://image.qwenlm.ai/generated-images/b0df7df2-eca0-4588-b1dd-2feafd3f25a0/_result.png";
+
+  return (
+    <div 
+      className={`hidden lg:block fixed top-0 ${position === 'right' ? 'right-0' : 'left-0'} h-full w-16 z-30 pointer-events-none bg-cover bg-repeat-y`}
+      style={{ backgroundImage: `url(${sideTileImage})` }}
+    />
+  );
+}
+
 
