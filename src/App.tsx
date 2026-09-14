@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { AppProvider } from './context/AppContext';
 import { LandingPage } from './pages/Landing';
 import { CustomerApp } from './pages/CustomerApp';
 import { AdminDashboard } from './pages/AdminDashboard';
@@ -15,11 +16,13 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-white font-vazir">
-      {currentView === 'landing' && <LandingPage navigate={navigate} />}
-      {currentView === 'customer' && <CustomerApp navigate={navigate} />}
-      {currentView === 'admin' && <AdminDashboard navigate={navigate} />}
-      {currentView === 'restaurant' && <RestaurantPage navigate={navigate} />}
-    </div>
+    <AppProvider>
+      <div className="min-h-screen bg-white font-vazir">
+        {currentView === 'landing' && <LandingPage navigate={navigate} />}
+        {currentView === 'customer' && <CustomerApp navigate={navigate} />}
+        {currentView === 'admin' && <AdminDashboard navigate={navigate} />}
+        {currentView === 'restaurant' && <RestaurantPage navigate={navigate} />}
+      </div>
+    </AppProvider>
   );
 }
