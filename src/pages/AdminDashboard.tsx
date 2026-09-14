@@ -81,11 +81,12 @@ const statusColors: Record<string, string> = {
 
 export function AdminDashboard({ navigate }: AdminDashboardProps) {
   const {
-    menuItems, orders, reservations, customers, coupons, notifications, restaurantInfo,
+    menuItems, orders, reservations, customers, coupons, notifications, campaigns, sentMessages, restaurantInfo,
     addMenuItem, updateMenuItem, deleteMenuItem, toggleMenuItemAvailability,
     updateOrderStatus, addReservation, updateReservation,
     addCoupon, updateCoupon,
     markNotificationRead, clearNotifications, updateRestaurantInfo,
+    addCampaign, updateCampaign, deleteCampaign, sendMessage,
   } = useApp();
 
   const [activeSection, setActiveSection] = useState('dashboard');
@@ -101,11 +102,15 @@ export function AdminDashboard({ navigate }: AdminDashboardProps) {
   const [menuCategoryFilter, setMenuCategoryFilter] = useState('all');
   const [financePeriod, setFinancePeriod] = useState('month');
   const [selectedDelivery, setSelectedDelivery] = useState<string | null>(null);
+  const [showCampaignModal, setShowCampaignModal] = useState(false);
+  const [showMessageModal, setShowMessageModal] = useState(false);
 
   // Form states
   const [newItem, setNewItem] = useState({ name: '', desc: '', price: 0, category: 'غذای اصلی', time: '15 دقیقه', image: 'https://image.qwenlm.ai/generated-images/9653abd5-65ae-4823-9aec-a378da6ead27/_result.png', popular: false, available: true });
   const [newRes, setNewRes] = useState({ name: '', guests: 2, time: '20:00', date: 'امشب', table: 'A-1', status: 'pending' as const, phone: '' });
   const [newCoupon, setNewCoupon] = useState({ code: '', discount: 0, type: 'percent' as const, expiresAt: '', usageLimit: 100, usedCount: 0, active: true });
+  const [newCampaign, setNewCampaign] = useState({ name: '', description: '', type: 'discount' as const, status: 'draft' as const, startDate: '', endDate: '', targetAudience: 'همه مشتریان', budget: 0 });
+  const [newMessage, setNewMessage] = useState({ type: 'sms' as const, title: '', content: '', recipients: 0, status: 'sent' as const });
 
   const menuItemsList = [
     { id: 'dashboard', icon: BarChart3, label: 'داشبورد', badge: null },
@@ -146,6 +151,71 @@ export function AdminDashboard({ navigate }: AdminDashboardProps) {
     addCoupon(newCoupon);
     setNewCoupon({ code: '', discount: 0, type: 'percent', expiresAt: '', usageLimit: 100, usedCount: 0, active: true });
     setShowAddCouponModal(false);
+  };
+
+  const handleAddCampaign = () => {
+    if (!newCampaign.name || !newCampaign.startDate || !newCampaign.endDate) return;
+    addCampaign(newCampaign);
+    setNewCampaign({ name: '', description: '', type: 'discount', status: 'draft', startDate: '', endDate: '', targetAudience: 'همه مشتریان', budget: 0 });
+    setShowCampaignModal(false);
+  };
+
+  const handleSendMessage = () => {
+    if (!newMessage.title || !newMessage.content || !newMessage.recipients) return;
+    sendMessage(newMessage);
+    setNewMessage({ type: 'sms', title: '', content: '', recipients: 0, status: 'sent' });
+    setShowMessageModal(false);
+  };
+
+  const handleExportFinanceReport = () => {
+    const deliveredOrders = orders.filter(o => o.status === 'delivered');
+    const totalRevenue = deliveredOrders.reduce((sum, o) => sum + o.total, 0);
+    const totalCost = Math.floor(totalRevenue * 0.35);
+    const netProfit = totalRevenue - totalCost;
+    
+    const reportData = [
+      { 'عنوان': 'گزارش مالی', 'مقدار': `تاریخ: ${new Date().toLocaleDateString('fa-IR')}` },
+      { 'عنوان': '', 'مقدار': '' },
+      { 'عنوان': 'درآمد کل', 'مقدار': `${totalRevenue.toLocaleString()} تومان` },
+      { 'عنوان': 'هزینه‌ها', 'مقدار': `${totalCost.toLocaleString()} تومان` },
+      { 'عنوان': 'سود خالص', 'مقدار': `${netProfit.toLocaleString()} تومان` },
+      { 'عنوان': 'حاشیه سود', 'مقدار': `${((netProfit / totalRevenue) * 100).toFixed(1)}٪` },
+      { 'عنوان': '', 'مقدار': '' },
+      { 'عنوان': 'تعداد سفارش‌ها', 'مقدار': deliveredOrders.length.toString() },
+      { 'عنوان': 'میانگین سفارش', 'مقدار': `${Math.floor(totalRevenue / deliveredOrders.length).toLocaleString()} تومان` },
+      { 'عنوان': '', 'مقدار': '' },
+      { 'عنوان': '--- جزئیات سفارش‌ها ---', 'مقدار': '' },
+      ...deliveredOrders.map(o => ({
+        'شماره': o.id,
+        'مشتری': o.customer,
+        'مبلغ (تومان)': o.total,
+        'تاریخ': o.time,
+      }))
+    ];
+    
+    const cols = Object.keys(reportData[0]);
+    const csvRows: string[] = ['\uFEFF'];
+    csvRows.push(cols.map(col => `"${col}"`).join(','));
+    reportData.forEach(row => {
+      const values = cols.map(col => {
+        const val = row[col as keyof typeof row];
+        if (val === null || val === undefined) return '';
+        const strVal = String(val).replace(/"/g, '""');
+        return `"${strVal}"`;
+      });
+      csvRows.push(values.join(','));
+    });
+    
+    const csvString = csvRows.join('\n');
+    const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `گزارش-مالی-${new Date().toLocaleDateString('fa-IR')}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   return (
@@ -926,7 +996,10 @@ export function AdminDashboard({ navigate }: AdminDashboardProps) {
                     <option value="month">ماه جاری</option>
                     <option value="year">سال جاری</option>
                   </select>
-                  <button className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-l from-green-600 to-emerald-600 text-white rounded-xl text-sm font-bold shadow-lg">
+                  <button 
+                    onClick={handleExportFinanceReport}
+                    className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-l from-green-600 to-emerald-600 text-white rounded-xl text-sm font-bold shadow-lg hover:shadow-xl transition-all"
+                  >
                     <Download className="w-4 h-4" />
                     گزارش مالی
                   </button>
@@ -1051,25 +1124,45 @@ export function AdminDashboard({ navigate }: AdminDashboardProps) {
                     <Sparkles className="w-5 h-5 text-primary" />
                     کمپین‌های فعال
                   </h3>
-                  <div className="space-y-3">
-                    {[
-                      { name: 'تخفیف تابستانه', status: 'فعال', reach: '۵,۲۰۰ نفر', conversion: '۱۲٪' },
-                      { name: 'معرفی به دوستان', status: 'فعال', reach: '۱,۸۰۰ نفر', conversion: '۲۳٪' },
-                      { name: 'بازگشت مشتریان', status: 'پایان یافته', reach: '۳,۴۰۰ نفر', conversion: '۸٪' },
-                    ].map((campaign, idx) => (
-                      <div key={idx} className="p-4 bg-gray-50 rounded-xl">
-                        <div className="flex items-center justify-between mb-2">
-                          <span className="font-bold text-sm">{campaign.name}</span>
-                          <span className={`text-xs px-2 py-0.5 rounded-full ${campaign.status === 'فعال' ? 'bg-green-100 text-green-700' : 'bg-gray-200 text-gray-600'}`}>{campaign.status}</span>
+                  <div className="space-y-3 max-h-80 overflow-y-auto">
+                    {campaigns.length === 0 ? (
+                      <div className="text-center py-8 text-gray-500 text-sm">کمپینی ایجاد نشده است</div>
+                    ) : (
+                      campaigns.map((campaign) => (
+                        <div key={campaign.id} className="p-4 bg-gray-50 rounded-xl">
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="font-bold text-sm">{campaign.name}</span>
+                            <div className="flex items-center gap-2">
+                              <span className={`text-xs px-2 py-0.5 rounded-full ${campaign.status === 'active' ? 'bg-green-100 text-green-700' : campaign.status === 'ended' ? 'bg-gray-200 text-gray-600' : campaign.status === 'paused' ? 'bg-yellow-100 text-yellow-700' : 'bg-blue-100 text-blue-700'}`}>
+                                {campaign.status === 'active' ? 'فعال' : campaign.status === 'ended' ? 'پایان یافته' : campaign.status === 'paused' ? 'متوقف' : 'پیش‌نویس'}
+                              </span>
+                              <button onClick={() => deleteCampaign(campaign.id)} className="p-1 hover:bg-red-50 rounded">
+                                <Trash2 className="w-3 h-3 text-red-500" />
+                              </button>
+                            </div>
+                          </div>
+                          <p className="text-xs text-gray-600 mb-2">{campaign.description}</p>
+                          <div className="grid grid-cols-3 gap-2 text-xs text-gray-600">
+                            <div>دسترسی: <span className="font-bold">{campaign.reach.toLocaleString()}</span></div>
+                            <div>نرخ تبدیل: <span className="font-bold">{campaign.conversion}٪</span></div>
+                            <div>بودجه: <span className="font-bold">{(campaign.budget / 1000000).toFixed(1)}M</span></div>
+                          </div>
+                          <div className="flex gap-2 mt-2">
+                            <button 
+                              onClick={() => updateCampaign(campaign.id, { status: campaign.status === 'active' ? 'paused' : 'active' })}
+                              className={`flex-1 py-1.5 text-xs rounded-lg font-medium ${campaign.status === 'active' ? 'bg-yellow-100 text-yellow-700' : 'bg-green-100 text-green-700'}`}
+                            >
+                              {campaign.status === 'active' ? 'توقف' : 'فعال‌سازی'}
+                            </button>
+                          </div>
                         </div>
-                        <div className="grid grid-cols-2 gap-2 text-xs text-gray-600">
-                          <div>دسترسی: <span className="font-bold">{campaign.reach}</span></div>
-                          <div>نرخ تبدیل: <span className="font-bold">{campaign.conversion}</span></div>
-                        </div>
-                      </div>
-                    ))}
+                      ))
+                    )}
                   </div>
-                  <button className="w-full mt-4 py-2.5 border-2 border-dashed border-primary/30 text-primary rounded-xl text-sm font-medium hover:bg-primary/5 transition-colors">
+                  <button 
+                    onClick={() => setShowCampaignModal(true)}
+                    className="w-full mt-4 py-2.5 border-2 border-dashed border-primary/30 text-primary rounded-xl text-sm font-medium hover:bg-primary/5 transition-colors"
+                  >
                     ایجاد کمپین جدید
                   </button>
                 </div>
@@ -1079,32 +1172,41 @@ export function AdminDashboard({ navigate }: AdminDashboardProps) {
                     <Mail className="w-5 h-5 text-primary" />
                     پیام‌های ارسالی
                   </h3>
-                  <div className="space-y-3">
-                    {[
-                      { type: 'پیامک', sent: 1250, delivered: 1180, read: 890 },
-                      { type: 'ایمیل', sent: 2345, delivered: 2200, read: 1560 },
-                      { type: 'اعلان درون‌برنامه‌ای', sent: 3400, delivered: 3400, read: 2100 },
-                    ].map((msg, idx) => (
-                      <div key={idx} className="p-4 bg-gray-50 rounded-xl">
-                        <div className="font-bold text-sm mb-2">{msg.type}</div>
-                        <div className="grid grid-cols-3 gap-2 text-xs">
-                          <div className="text-center">
-                            <div className="font-black text-lg">{msg.sent.toLocaleString()}</div>
-                            <div className="text-gray-500">ارسال شده</div>
+                  <div className="space-y-3 max-h-80 overflow-y-auto">
+                    {sentMessages.length === 0 ? (
+                      <div className="text-center py-8 text-gray-500 text-sm">پیامی ارسال نشده است</div>
+                    ) : (
+                      sentMessages.map((msg) => (
+                        <div key={msg.id} className="p-4 bg-gray-50 rounded-xl">
+                          <div className="flex items-center justify-between mb-2">
+                            <div className="font-bold text-sm">{msg.title}</div>
+                            <span className={`text-xs px-2 py-0.5 rounded-full ${msg.type === 'sms' ? 'bg-blue-100 text-blue-700' : msg.type === 'email' ? 'bg-purple-100 text-purple-700' : 'bg-orange-100 text-orange-700'}`}>
+                              {msg.type === 'sms' ? 'پیامک' : msg.type === 'email' ? 'ایمیل' : 'اعلان'}
+                            </span>
                           </div>
-                          <div className="text-center">
-                            <div className="font-black text-lg text-green-600">{msg.delivered.toLocaleString()}</div>
-                            <div className="text-gray-500">تحویل شده</div>
-                          </div>
-                          <div className="text-center">
-                            <div className="font-black text-lg text-primary">{msg.read.toLocaleString()}</div>
-                            <div className="text-gray-500">مشاهده شده</div>
+                          <p className="text-xs text-gray-600 mb-2 line-clamp-1">{msg.content}</p>
+                          <div className="grid grid-cols-3 gap-2 text-xs">
+                            <div className="text-center">
+                              <div className="font-black text-lg">{msg.recipients.toLocaleString()}</div>
+                              <div className="text-gray-500">ارسال شده</div>
+                            </div>
+                            <div className="text-center">
+                              <div className="font-black text-lg text-green-600">{msg.delivered.toLocaleString()}</div>
+                              <div className="text-gray-500">تحویل شده</div>
+                            </div>
+                            <div className="text-center">
+                              <div className="font-black text-lg text-primary">{msg.read.toLocaleString()}</div>
+                              <div className="text-gray-500">مشاهده شده</div>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    ))}
+                      ))
+                    )}
                   </div>
-                  <button className="w-full mt-4 py-2.5 border-2 border-dashed border-primary/30 text-primary rounded-xl text-sm font-medium hover:bg-primary/5 transition-colors">
+                  <button 
+                    onClick={() => setShowMessageModal(true)}
+                    className="w-full mt-4 py-2.5 border-2 border-dashed border-primary/30 text-primary rounded-xl text-sm font-medium hover:bg-primary/5 transition-colors"
+                  >
                     ارسال پیام جدید
                   </button>
                 </div>
@@ -1370,6 +1472,175 @@ export function AdminDashboard({ navigate }: AdminDashboardProps) {
               </button>
             </div>
             <button onClick={() => navigate('landing')} className="w-full py-3 bg-red-100 text-red-700 font-bold rounded-xl">خروج از حساب</button>
+          </div>
+        </Modal>
+      )}
+
+      {showCampaignModal && (
+        <Modal title="ایجاد کمپین جدید" onClose={() => setShowCampaignModal(false)}>
+          <div className="space-y-4">
+            <div>
+              <label className="text-sm font-medium text-gray-700 mb-1 block">نام کمپین</label>
+              <input 
+                type="text" 
+                value={newCampaign.name} 
+                onChange={(e) => setNewCampaign({...newCampaign, name: e.target.value})} 
+                className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-primary" 
+                placeholder="مثلاً: تخفیف نوروزی" 
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium text-gray-700 mb-1 block">توضیحات</label>
+              <textarea 
+                value={newCampaign.description} 
+                onChange={(e) => setNewCampaign({...newCampaign, description: e.target.value})} 
+                className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-primary" 
+                rows={3} 
+                placeholder="توضیح مختصر درباره کمپین..." 
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium text-gray-700 mb-1 block">نوع کمپین</label>
+              <select 
+                value={newCampaign.type} 
+                onChange={(e) => setNewCampaign({...newCampaign, type: e.target.value as any})} 
+                className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-primary"
+              >
+                <option value="discount">تخفیف</option>
+                <option value="referral">معرفی به دوستان</option>
+                <option value="retention">بازگشت مشتری</option>
+                <option value="seasonal">فصلی</option>
+              </select>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-sm font-medium text-gray-700 mb-1 block">تاریخ شروع</label>
+                <input 
+                  type="text" 
+                  value={newCampaign.startDate} 
+                  onChange={(e) => setNewCampaign({...newCampaign, startDate: e.target.value})} 
+                  className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-primary" 
+                  placeholder="۱۴۰۳/۰۱/۰۱" 
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium text-gray-700 mb-1 block">تاریخ پایان</label>
+                <input 
+                  type="text" 
+                  value={newCampaign.endDate} 
+                  onChange={(e) => setNewCampaign({...newCampaign, endDate: e.target.value})} 
+                  className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-primary" 
+                  placeholder="۱۴۰۳/۰۳/۳۱" 
+                />
+              </div>
+            </div>
+            <div>
+              <label className="text-sm font-medium text-gray-700 mb-1 block">مخاطب هدف</label>
+              <select 
+                value={newCampaign.targetAudience} 
+                onChange={(e) => setNewCampaign({...newCampaign, targetAudience: e.target.value})} 
+                className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-primary"
+              >
+                <option>همه مشتریان</option>
+                <option>اعضای باشگاه طلایی</option>
+                <option>اعضای باشگاه نقره‌ای</option>
+                <option>مشتریان جدید</option>
+                <option>مشتریان غیرفعال</option>
+              </select>
+            </div>
+            <div>
+              <label className="text-sm font-medium text-gray-700 mb-1 block">بودجه (تومان)</label>
+              <input 
+                type="number" 
+                value={newCampaign.budget} 
+                onChange={(e) => setNewCampaign({...newCampaign, budget: +e.target.value})} 
+                className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-primary" 
+              />
+            </div>
+            <button 
+              onClick={handleAddCampaign} 
+              className="w-full py-3 bg-gradient-to-l from-primary to-primary-dark text-white font-bold rounded-xl hover:shadow-lg transition-all"
+            >
+              ایجاد کمپین
+            </button>
+          </div>
+        </Modal>
+      )}
+
+      {showMessageModal && (
+        <Modal title="ارسال پیام جدید" onClose={() => setShowMessageModal(false)}>
+          <div className="space-y-4">
+            <div>
+              <label className="text-sm font-medium text-gray-700 mb-1 block">نوع پیام</label>
+              <div className="grid grid-cols-3 gap-2">
+                {[
+                  { id: 'sms', label: 'پیامک', icon: '💬' },
+                  { id: 'email', label: 'ایمیل', icon: '✉️' },
+                  { id: 'push', label: 'اعلان', icon: '🔔' },
+                ].map((type) => (
+                  <button
+                    key={type.id}
+                    onClick={() => setNewMessage({...newMessage, type: type.id as any})}
+                    className={`py-3 rounded-xl text-sm font-medium transition-all ${
+                      newMessage.type === type.id 
+                        ? 'bg-gradient-to-l from-primary to-primary-dark text-white shadow-md' 
+                        : 'bg-gray-100 text-gray-600'
+                    }`}
+                  >
+                    {type.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div>
+              <label className="text-sm font-medium text-gray-700 mb-1 block">عنوان</label>
+              <input 
+                type="text" 
+                value={newMessage.title} 
+                onChange={(e) => setNewMessage({...newMessage, title: e.target.value})} 
+                className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-primary" 
+                placeholder="عنوان پیام" 
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium text-gray-700 mb-1 block">محتوای پیام</label>
+              <textarea 
+                value={newMessage.content} 
+                onChange={(e) => setNewMessage({...newMessage, content: e.target.value})} 
+                className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-primary" 
+                rows={4} 
+                placeholder="متن پیام..." 
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium text-gray-700 mb-1 block">مخاطبین</label>
+              <select 
+                onChange={(e) => setNewMessage({...newMessage, recipients: +e.target.value})} 
+                className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-primary"
+                defaultValue=""
+              >
+                <option value="" disabled>انتخاب کنید</option>
+                <option value={customers.length}>همه مشتریان ({customers.length} نفر)</option>
+                <option value={customers.filter(c => c.tier === 'طلایی').length}>اعضای طلایی ({customers.filter(c => c.tier === 'طلایی').length} نفر)</option>
+                <option value={customers.filter(c => c.tier === 'نقره‌ای').length}>اعضای نقره‌ای ({customers.filter(c => c.tier === 'نقره‌ای').length} نفر)</option>
+                <option value={customers.filter(c => c.orders < 5).length}>مشتریان جدید ({customers.filter(c => c.orders < 5).length} نفر)</option>
+              </select>
+            </div>
+            {newMessage.recipients > 0 && (
+              <div className="bg-primary/5 border border-primary/20 rounded-xl p-3">
+                <div className="text-xs text-gray-600">هزینه تقریبی ارسال:</div>
+                <div className="text-lg font-black text-primary">
+                  {(newMessage.type === 'sms' ? newMessage.recipients * 500 : newMessage.type === 'email' ? newMessage.recipients * 100 : 0).toLocaleString()} تومان
+                </div>
+              </div>
+            )}
+            <button 
+              onClick={handleSendMessage} 
+              className="w-full py-3 bg-gradient-to-l from-primary to-primary-dark text-white font-bold rounded-xl hover:shadow-lg transition-all flex items-center justify-center gap-2"
+            >
+              <Send className="w-4 h-4" />
+              ارسال پیام
+            </button>
           </div>
         </Modal>
       )}

@@ -59,6 +59,33 @@ export interface Coupon {
   active: boolean;
 }
 
+export interface Campaign {
+  id: number;
+  name: string;
+  description: string;
+  type: 'discount' | 'referral' | 'retention' | 'seasonal';
+  status: 'active' | 'paused' | 'ended' | 'draft';
+  startDate: string;
+  endDate: string;
+  targetAudience: string;
+  reach: number;
+  conversion: number;
+  budget: number;
+  createdAt: number;
+}
+
+export interface SentMessage {
+  id: number;
+  type: 'sms' | 'email' | 'push';
+  title: string;
+  content: string;
+  recipients: number;
+  delivered: number;
+  read: number;
+  sentAt: number;
+  status: 'sent' | 'scheduled' | 'failed';
+}
+
 export interface Notification {
   id: number;
   title: string;
@@ -75,6 +102,8 @@ interface AppState {
   customers: Customer[];
   coupons: Coupon[];
   notifications: Notification[];
+  campaigns: Campaign[];
+  sentMessages: SentMessage[];
   restaurantInfo: {
     name: string;
     type: string;
@@ -99,6 +128,10 @@ interface AppState {
   markNotificationRead: (id: number) => void;
   clearNotifications: () => void;
   updateRestaurantInfo: (info: Partial<AppState['restaurantInfo']>) => void;
+  addCampaign: (campaign: Omit<Campaign, 'id' | 'createdAt' | 'reach' | 'conversion'>) => void;
+  updateCampaign: (id: number, updates: Partial<Campaign>) => void;
+  deleteCampaign: (id: number) => void;
+  sendMessage: (message: Omit<SentMessage, 'id' | 'sentAt' | 'delivered' | 'read'>) => void;
 }
 
 const AppContext = createContext<AppState | undefined>(undefined);
@@ -158,6 +191,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [customers, setCustomers] = useState<Customer[]>(initialCustomers);
   const [coupons, setCoupons] = useState<Coupon[]>(initialCoupons);
   const [notifications, setNotifications] = useState<Notification[]>(initialNotifications);
+  const [campaigns, setCampaigns] = useState<Campaign[]>([
+    { id: 1, name: 'تخفیف تابستانه', description: 'تخفیف ۲۰ درصدی برای تمام سفارش‌ها', type: 'discount', status: 'active', startDate: '۱۴۰۳/۰۴/۰۱', endDate: '۱۴۰۳/۰۶/۳۱', targetAudience: 'همه مشتریان', reach: 5200, conversion: 12, budget: 5000000, createdAt: Date.now() - 86400000 * 30 },
+    { id: 2, name: 'معرفی به دوستان', description: '۵۰ هزار تومان تخفیف برای معرفی هر دوست', type: 'referral', status: 'active', startDate: '۱۴۰۳/۰۱/۰۱', endDate: '۱۴۰۳/۱۲/۲۹', targetAudience: 'اعضای باشگاه', reach: 1800, conversion: 23, budget: 10000000, createdAt: Date.now() - 86400000 * 90 },
+    { id: 3, name: 'بازگشت مشتریان', description: 'تخفیف ویژه برای مشتریان غیرفعال', type: 'retention', status: 'ended', startDate: '۱۴۰۳/۰۲/۰۱', endDate: '۱۴۰۳/۰۳/۳۱', targetAudience: 'مشتریان غیرفعال', reach: 3400, conversion: 8, budget: 3000000, createdAt: Date.now() - 86400000 * 60 },
+  ]);
+  const [sentMessages, setSentMessages] = useState<SentMessage[]>([
+    { id: 1, type: 'sms', title: 'تخفیف ویژه', content: '۲۰٪ تخفیف برای سفارش بعدی شما', recipients: 1250, delivered: 1180, read: 890, sentAt: Date.now() - 86400000, status: 'sent' },
+    { id: 2, type: 'email', title: 'خبرنامه هفتگی', content: 'منوی جدید این هفته را مشاهده کنید', recipients: 2345, delivered: 2200, read: 1560, sentAt: Date.now() - 86400000 * 2, status: 'sent' },
+    { id: 3, type: 'push', title: 'سفارش شما آماده است', content: 'سفارش شما آماده تحویل است', recipients: 3400, delivered: 3400, read: 2100, sentAt: Date.now() - 86400000 * 3, status: 'sent' },
+  ]);
   const [restaurantInfo, setRestaurantInfo] = useState({
     name: 'رستوران سنتی اصفهان',
     type: 'ایرانی',
@@ -227,15 +270,42 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setRestaurantInfo(prev => ({ ...prev, ...info }));
   };
 
+  const addCampaign = (campaign: Omit<Campaign, 'id' | 'createdAt' | 'reach' | 'conversion'>) => {
+    const newCampaign: Campaign = { ...campaign, id: Date.now(), createdAt: Date.now(), reach: 0, conversion: 0 };
+    setCampaigns(prev => [...prev, newCampaign]);
+    setNotifications(prev => [{ id: Date.now(), title: 'کمپین جدید', message: `کمپین "${campaign.name}" ایجاد شد`, type: 'system', read: false, createdAt: Date.now() }, ...prev]);
+  };
+
+  const updateCampaign = (id: number, updates: Partial<Campaign>) => {
+    setCampaigns(prev => prev.map(c => c.id === id ? { ...c, ...updates } : c));
+  };
+
+  const deleteCampaign = (id: number) => {
+    setCampaigns(prev => prev.filter(c => c.id !== id));
+  };
+
+  const sendMessage = (message: Omit<SentMessage, 'id' | 'sentAt' | 'delivered' | 'read'>) => {
+    const newMessage: SentMessage = { 
+      ...message, 
+      id: Date.now(), 
+      sentAt: Date.now(), 
+      delivered: Math.floor(message.recipients * 0.95), 
+      read: Math.floor(message.recipients * 0.7)
+    };
+    setSentMessages(prev => [newMessage, ...prev]);
+    setNotifications(prev => [{ id: Date.now(), title: 'پیام ارسال شد', message: `${message.type === 'sms' ? 'پیامک' : message.type === 'email' ? 'ایمیل' : 'اعلان'} به ${message.recipients} نفر ارسال شد`, type: 'system', read: false, createdAt: Date.now() }, ...prev]);
+  };
+
   return (
     <AppContext.Provider value={{
-      menuItems, orders, reservations, customers, coupons, notifications, restaurantInfo,
+      menuItems, orders, reservations, customers, coupons, notifications, campaigns, sentMessages, restaurantInfo,
       setMenuItems, addMenuItem, updateMenuItem, deleteMenuItem, toggleMenuItemAvailability,
       addOrder, updateOrderStatus,
       addReservation, updateReservation,
       addCoupon, updateCoupon,
       markNotificationRead, clearNotifications,
       updateRestaurantInfo,
+      addCampaign, updateCampaign, deleteCampaign, sendMessage,
     }}>
       {children}
     </AppContext.Provider>
