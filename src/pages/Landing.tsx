@@ -224,28 +224,26 @@ export function LandingPage({ navigate }: LandingPageProps) {
             <p className="text-gray-600 text-lg">از یک مغازه کوچک تا زنجیره چندشعبه‌ای — سفرت برای همه مناسب است</p>
           </div>
 
-          <Carousel height="h-80" autoPlay interval={3000}>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
             {[
-              { name: 'رستوران سنتی', img: 'https://image.qwenlm.ai/generated-images/9653abd5-65ae-4823-9aec-a378da6ead27/_result.png', desc: 'غذاهای اصیل ایرانی با طعم خانگی' },
-              { name: 'کافه و قهوه‌خانه', img: 'https://image.qwenlm.ai/generated-images/48e98453-6a83-46c1-abab-3354cfa62cf8/_result.png', desc: 'قهوه‌های ویژه و دسرهای خانگی' },
-              { name: 'فست‌فود و برگر', img: 'https://image.qwenlm.ai/generated-images/3684ff9c-4d63-45e1-90f4-2bf6a74ee5c3/_result.png', desc: 'برگرهای آبدار و ساندویچ‌های خوشمزه' },
-              { name: 'پیتزا و ایتالیایی', img: 'https://image.qwenlm.ai/generated-images/a2cbbccf-7b36-400e-a171-d5ac31640bd6/_result.png', desc: 'پیتزاهای تنوری با مواد تازه' },
-              { name: 'غذای دریایی', img: 'https://image.qwenlm.ai/generated-images/9bd112c4-b93e-4c63-86f4-b61aeb0f36aa/_result.png', desc: 'ماهی و میگوی تازه روز' },
-              { name: 'قنادی و شیرینی', img: 'https://image.qwenlm.ai/generated-images/7cb017fc-dbea-4836-ada0-e94414f8a930/_result.png', desc: 'شیرینی‌های سنتی و مدرن' },
+              { name: 'رستوران سنتی', img: 'https://image.qwenlm.ai/generated-images/9653abd5-65ae-4823-9aec-a378da6ead27/_result.png' },
+              { name: 'کافه و قهوه‌خانه', img: 'https://image.qwenlm.ai/generated-images/48e98453-6a83-46c1-abab-3354cfa62cf8/_result.png' },
+              { name: 'فست‌فود و برگر', img: 'https://image.qwenlm.ai/generated-images/3684ff9c-4d63-45e1-90f4-2bf6a74ee5c3/_result.png' },
+              { name: 'پیتزا و ساندویچ', img: 'https://image.qwenlm.ai/generated-images/a2cbbccf-7b36-400e-a171-d5ac31640bd6/_result.png' },
+              { name: 'غذای دریایی', img: 'https://image.qwenlm.ai/generated-images/9bd112c4-b93e-4c63-86f4-b61aeb0f36aa/_result.png' },
+              { name: 'قنادی و شیرینی', img: 'https://image.qwenlm.ai/generated-images/7cb017fc-dbea-4836-ada0-e94414f8a930/_result.png' },
+              { name: 'آشپزی بین‌المللی', img: 'https://image.qwenlm.ai/generated-images/01534e96-1a30-4399-896c-8e0fff37aae4/_result.png' },
+              { name: 'کترینگ سازمانی', img: 'https://image.qwenlm.ai/generated-images/50fab5c0-0916-4b5a-a88f-4a42bd0aab3c/_result.png' },
             ].map((biz, idx) => (
-              <CarouselItem key={idx} image={biz.img} overlay="gradient">
-                <div className="flex items-end justify-between w-full">
-                  <div>
-                    <h3 className="text-white text-xl font-black">{biz.name}</h3>
-                    <p className="text-white/80 text-sm mt-1">{biz.desc}</p>
-                  </div>
-                  <button onClick={() => navigate('restaurant')} className="bg-white/20 backdrop-blur-md text-white px-4 py-2 rounded-xl text-sm font-medium hover:bg-white/30 transition-colors">
-                    مشاهده
-                  </button>
+              <div key={idx} className="group relative rounded-2xl overflow-hidden cursor-pointer aspect-square" onClick={() => navigate('restaurant')}>
+                <img src={biz.img} alt={biz.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent"></div>
+                <div className="absolute bottom-4 right-4 left-4">
+                  <h3 className="text-white font-bold text-sm sm:text-base">{biz.name}</h3>
                 </div>
-              </CarouselItem>
+              </div>
             ))}
-          </Carousel>
+          </div>
         </div>
       </section>
 

@@ -2,6 +2,7 @@ import { AppView } from '../App';
 import { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { Carousel, CarouselItem } from '../components/Carousel';
+import { exportOrdersToExcel, exportCustomersToExcel, exportMenuToExcel, exportReservationsToExcel, exportCouponsToExcel } from '../utils/export';
 import {
   BarChart3, ShoppingBag, Users, ChefHat, Calendar, Truck,
   CreditCard, Settings, Bell, Search, Plus, Edit, Trash2,
@@ -9,11 +10,12 @@ import {
   ArrowUpRight, ArrowDownRight, Filter, Download, Package,
   Star, MessageSquare, DollarSign, Layers, Tag, Gift,
   ChevronDown, AlertCircle, Sparkles, Target, Zap, Globe,
-  Shield, Percent, Ticket, Send
+  Shield, Percent, Ticket, Send, FileText, PieChart as PieIcon,
+  Link2, Palette, BellRing, Database, Key, Mail, Smartphone, MapPin
 } from 'lucide-react';
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  BarChart, Bar, PieChart, Pie, Cell, LineChart, Line
+  BarChart, Bar, PieChart, Pie, Cell, LineChart, Line, ComposedChart
 } from 'recharts';
 
 interface AdminDashboardProps {
@@ -28,6 +30,15 @@ const salesData = [
   { name: 'چهارشنبه', sales: 6200000, orders: 63 },
   { name: 'پنج‌شنبه', sales: 7800000, orders: 78 },
   { name: 'جمعه', sales: 9500000, orders: 95 },
+];
+
+const monthlyData = [
+  { month: 'فروردین', revenue: 120000000, cost: 45000000 },
+  { month: 'اردیبهشت', revenue: 135000000, cost: 48000000 },
+  { month: 'خرداد', revenue: 150000000, cost: 52000000 },
+  { month: 'تیر', revenue: 165000000, cost: 55000000 },
+  { month: 'مرداد', revenue: 180000000, cost: 58000000 },
+  { month: 'شهریور', revenue: 185000000, cost: 60000000 },
 ];
 
 const hourlyData = [
@@ -85,8 +96,11 @@ export function AdminDashboard({ navigate }: AdminDashboardProps) {
   const [showAddResModal, setShowAddResModal] = useState(false);
   const [showAddCouponModal, setShowAddCouponModal] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
+  const [showCustomerDetails, setShowCustomerDetails] = useState<number | null>(null);
   const [orderFilter, setOrderFilter] = useState<string>('all');
   const [menuCategoryFilter, setMenuCategoryFilter] = useState('all');
+  const [financePeriod, setFinancePeriod] = useState('month');
+  const [selectedDelivery, setSelectedDelivery] = useState<string | null>(null);
 
   // Form states
   const [newItem, setNewItem] = useState({ name: '', desc: '', price: 0, category: 'غذای اصلی', time: '15 دقیقه', image: 'https://image.qwenlm.ai/generated-images/9653abd5-65ae-4823-9aec-a378da6ead27/_result.png', popular: false, available: true });
@@ -139,7 +153,6 @@ export function AdminDashboard({ navigate }: AdminDashboardProps) {
       {/* Sidebar */}
       <aside className={`fixed inset-y-0 right-0 z-40 w-72 bg-gradient-to-b from-[#1a1a2e] via-[#16213e] to-[#0f0f1a] shadow-2xl transform transition-transform duration-300 lg:translate-x-0 ${sidebarOpen ? 'translate-x-0' : 'translate-x-full lg:translate-x-0'}`}>
         <div className="flex flex-col h-full">
-          {/* Logo */}
           <div className="p-6 border-b border-white/10">
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 bg-gradient-to-br from-primary via-primary-light to-accent rounded-2xl flex items-center justify-center shadow-lg shadow-primary/30">
@@ -152,7 +165,6 @@ export function AdminDashboard({ navigate }: AdminDashboardProps) {
             </div>
           </div>
 
-          {/* Restaurant Status */}
           <div className="px-4 py-3 mx-4 mt-4 bg-gradient-to-l from-green-500/20 to-emerald-500/10 border border-green-500/30 rounded-xl">
             <div className="flex items-center gap-2">
               <div className={`w-2 h-2 rounded-full ${restaurantInfo.isOpen ? 'bg-green-400 animate-pulse' : 'bg-red-400'}`}></div>
@@ -161,7 +173,6 @@ export function AdminDashboard({ navigate }: AdminDashboardProps) {
             <div className="text-xs text-white/50 mt-1">{restaurantInfo.name}</div>
           </div>
 
-          {/* Navigation */}
           <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
             {menuItemsList.map(item => (
               <button
@@ -184,7 +195,6 @@ export function AdminDashboard({ navigate }: AdminDashboardProps) {
             ))}
           </nav>
 
-          {/* Footer */}
           <div className="p-4 border-t border-white/10">
             <button onClick={() => navigate('landing')} className="flex items-center gap-3 w-full px-4 py-3 rounded-xl text-sm text-white/60 hover:bg-white/5 hover:text-white transition-all">
               <ArrowDownRight className="w-5 h-5" />
@@ -194,14 +204,11 @@ export function AdminDashboard({ navigate }: AdminDashboardProps) {
         </div>
       </aside>
 
-      {/* Mobile Overlay */}
       {sidebarOpen && (
         <div className="lg:hidden fixed inset-0 z-30 bg-black/50" onClick={() => setSidebarOpen(false)}></div>
       )}
 
-      {/* Main Content */}
       <main className="flex-1 lg:mr-72 min-h-screen">
-        {/* Top Bar */}
         <header className="sticky top-0 z-20 bg-white/80 backdrop-blur-xl border-b border-gray-200/50 px-4 lg:px-8 py-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -236,7 +243,6 @@ export function AdminDashboard({ navigate }: AdminDashboardProps) {
           </div>
         </header>
 
-        {/* Notifications Panel */}
         {showNotifPanel && (
           <div className="fixed top-16 left-4 lg:left-8 w-96 max-h-[70vh] bg-white rounded-2xl shadow-2xl border border-gray-100 z-50 overflow-hidden">
             <div className="p-4 border-b border-gray-100 flex items-center justify-between bg-gradient-to-l from-primary/5 to-transparent">
@@ -276,11 +282,9 @@ export function AdminDashboard({ navigate }: AdminDashboardProps) {
           </div>
         )}
 
-        {/* Content */}
         <div className="p-4 lg:p-8">
           {activeSection === 'dashboard' && (
             <div className="space-y-6">
-              {/* Welcome & Carousel */}
               <div className="grid lg:grid-cols-3 gap-6">
                 <div className="lg:col-span-2">
                   <Carousel height="h-56" autoPlay interval={4000}>
@@ -342,7 +346,6 @@ export function AdminDashboard({ navigate }: AdminDashboardProps) {
                 </div>
               </div>
 
-              {/* Stats Cards */}
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                 {[
                   { label: 'فروش امروز', value: '۹,۵۰۰,۰۰۰', unit: 'تومان', change: '+۱۸٪', up: true, icon: DollarSign, gradient: 'from-green-500 to-emerald-600' },
@@ -366,7 +369,6 @@ export function AdminDashboard({ navigate }: AdminDashboardProps) {
                 ))}
               </div>
 
-              {/* Charts */}
               <div className="grid lg:grid-cols-2 gap-6">
                 <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
                   <div className="flex items-center justify-between mb-6">
@@ -374,10 +376,6 @@ export function AdminDashboard({ navigate }: AdminDashboardProps) {
                       <h3 className="font-bold text-dark text-lg">فروش هفتگی</h3>
                       <p className="text-xs text-gray-500 mt-1">مقایسه فروش ۷ روز اخیر</p>
                     </div>
-                    <select className="text-xs bg-gray-50 rounded-lg px-3 py-2 border border-gray-200 focus:outline-none focus:border-primary">
-                      <option>این هفته</option>
-                      <option>هفته قبل</option>
-                    </select>
                   </div>
                   <ResponsiveContainer width="100%" height={220}>
                     <AreaChart data={salesData}>
@@ -415,7 +413,6 @@ export function AdminDashboard({ navigate }: AdminDashboardProps) {
                 </div>
               </div>
 
-              {/* KDS & Category */}
               <div className="grid lg:grid-cols-3 gap-6">
                 <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
                   <h3 className="font-bold text-dark mb-4">سهم دسته‌بندی‌ها</h3>
@@ -483,13 +480,15 @@ export function AdminDashboard({ navigate }: AdminDashboardProps) {
             <div className="space-y-6">
               <div className="flex items-center justify-between flex-wrap gap-3">
                 <h2 className="text-2xl font-black text-dark">مدیریت سفارش‌ها</h2>
-                <button className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-l from-primary to-primary-dark text-white rounded-xl text-sm font-bold shadow-lg shadow-primary/20 hover:shadow-xl transition-all">
+                <button 
+                  onClick={() => exportOrdersToExcel(filteredOrders)}
+                  className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-l from-green-600 to-emerald-600 text-white rounded-xl text-sm font-bold shadow-lg shadow-green-600/20 hover:shadow-xl transition-all"
+                >
                   <Download className="w-4 h-4" />
-                  خروجی اکسل
+                  خروجی اکسل ({filteredOrders.length} سفارش)
                 </button>
               </div>
 
-              {/* Filter Tabs */}
               <div className="flex gap-2 overflow-x-auto pb-2">
                 {[
                   { id: 'all', label: 'همه', count: orders.length },
@@ -514,7 +513,6 @@ export function AdminDashboard({ navigate }: AdminDashboardProps) {
                 ))}
               </div>
 
-              {/* Orders List */}
               <div className="space-y-3">
                 {filteredOrders.map(order => (
                   <div key={order.id} className="bg-white rounded-2xl p-5 border border-gray-100 hover:shadow-md transition-all">
@@ -530,7 +528,7 @@ export function AdminDashboard({ navigate }: AdminDashboardProps) {
                             <span className="text-xs text-gray-400">{order.type === 'delivery' ? 'ارسال' : order.type === 'pickup' ? 'بیرون‌بر' : 'حضوری'}</span>
                           </div>
                           <div className="text-sm text-gray-600 mt-1">{order.customer} • {order.items}</div>
-                          <div className="text-xs text-gray-400 mt-1">{order.time}</div>
+                          <div className="text-xs text-gray-400 mt-1">{order.time}{order.address && ` • ${order.address}`}</div>
                         </div>
                       </div>
                       <div className="flex items-center gap-3">
@@ -563,13 +561,21 @@ export function AdminDashboard({ navigate }: AdminDashboardProps) {
             <div className="space-y-6">
               <div className="flex items-center justify-between flex-wrap gap-3">
                 <h2 className="text-2xl font-black text-dark">مدیریت منو</h2>
-                <button onClick={() => setShowAddItemModal(true)} className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-l from-primary to-primary-dark text-white rounded-xl text-sm font-bold shadow-lg shadow-primary/20 hover:shadow-xl transition-all">
-                  <Plus className="w-4 h-4" />
-                  افزودن آیتم جدید
-                </button>
+                <div className="flex gap-2">
+                  <button 
+                    onClick={() => exportMenuToExcel(filteredMenuItems)}
+                    className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-l from-green-600 to-emerald-600 text-white rounded-xl text-sm font-bold shadow-lg"
+                  >
+                    <Download className="w-4 h-4" />
+                    خروجی
+                  </button>
+                  <button onClick={() => setShowAddItemModal(true)} className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-l from-primary to-primary-dark text-white rounded-xl text-sm font-bold shadow-lg shadow-primary/20 hover:shadow-xl transition-all">
+                    <Plus className="w-4 h-4" />
+                    افزودن آیتم
+                  </button>
+                </div>
               </div>
 
-              {/* Category Filter */}
               <div className="flex gap-2 overflow-x-auto pb-2">
                 {['all', 'غذای اصلی', 'پیش‌غذا', 'نوشیدنی', 'دسر'].map(cat => (
                   <button
@@ -584,7 +590,6 @@ export function AdminDashboard({ navigate }: AdminDashboardProps) {
                 ))}
               </div>
 
-              {/* Menu Grid */}
               <div className="grid sm:grid-cols-2 gap-4">
                 {filteredMenuItems.map(item => (
                   <div key={item.id} className="bg-white rounded-2xl p-4 border border-gray-100 hover:shadow-lg transition-all group">
@@ -628,13 +633,21 @@ export function AdminDashboard({ navigate }: AdminDashboardProps) {
             <div className="space-y-6">
               <div className="flex items-center justify-between flex-wrap gap-3">
                 <h2 className="text-2xl font-black text-dark">مدیریت رزروها</h2>
-                <button onClick={() => setShowAddResModal(true)} className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-l from-primary to-primary-dark text-white rounded-xl text-sm font-bold shadow-lg shadow-primary/20">
-                  <Plus className="w-4 h-4" />
-                  رزرو جدید
-                </button>
+                <div className="flex gap-2">
+                  <button 
+                    onClick={() => exportReservationsToExcel(reservations)}
+                    className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-l from-green-600 to-emerald-600 text-white rounded-xl text-sm font-bold shadow-lg"
+                  >
+                    <Download className="w-4 h-4" />
+                    خروجی
+                  </button>
+                  <button onClick={() => setShowAddResModal(true)} className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-l from-primary to-primary-dark text-white rounded-xl text-sm font-bold shadow-lg shadow-primary/20">
+                    <Plus className="w-4 h-4" />
+                    رزرو جدید
+                  </button>
+                </div>
               </div>
 
-              {/* Floor Plan */}
               <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
                 <h3 className="font-bold text-dark mb-4 flex items-center gap-2">
                   <Target className="w-5 h-5 text-primary" />
@@ -656,7 +669,6 @@ export function AdminDashboard({ navigate }: AdminDashboardProps) {
                 </div>
               </div>
 
-              {/* Reservations List */}
               <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
                 <div className="p-4 border-b border-gray-100 bg-gradient-to-l from-primary/5 to-transparent">
                   <h3 className="font-bold text-dark">لیست رزروها</h3>
@@ -689,31 +701,46 @@ export function AdminDashboard({ navigate }: AdminDashboardProps) {
 
           {activeSection === 'customers' && (
             <div className="space-y-6">
-              <h2 className="text-2xl font-black text-dark">مدیریت مشتریان و وفاداری</h2>
+              <div className="flex items-center justify-between flex-wrap gap-3">
+                <h2 className="text-2xl font-black text-dark">مدیریت مشتریان و وفاداری</h2>
+                <button 
+                  onClick={() => exportCustomersToExcel(customers)}
+                  className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-l from-green-600 to-emerald-600 text-white rounded-xl text-sm font-bold shadow-lg"
+                >
+                  <Download className="w-4 h-4" />
+                  خروجی اکسل
+                </button>
+              </div>
               
-              <div className="grid sm:grid-cols-3 gap-4">
+              <div className="grid sm:grid-cols-4 gap-4">
                 {[
                   { label: 'کل مشتریان', value: customers.length.toString(), icon: Users, gradient: 'from-blue-500 to-indigo-600' },
-                  { label: 'اعضای باشگاه', value: customers.filter(c => c.tier === 'طلایی').length.toString(), icon: Star, gradient: 'from-amber-500 to-orange-600' },
+                  { label: 'اعضای طلایی', value: customers.filter(c => c.tier === 'طلایی').length.toString(), icon: Star, gradient: 'from-amber-500 to-orange-600' },
                   { label: 'میانگین خرید', value: '۷.۸M', icon: DollarSign, gradient: 'from-green-500 to-emerald-600' },
+                  { label: 'نرخ بازگشت', value: '۶۷٪', icon: TrendingUp, gradient: 'from-purple-500 to-pink-600' },
                 ].map((stat, idx) => (
                   <div key={idx} className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm">
                     <div className={`w-12 h-12 rounded-2xl bg-gradient-to-br ${stat.gradient} flex items-center justify-center mb-3 shadow-lg`}>
                       <stat.icon className="w-6 h-6 text-white" />
                     </div>
-                    <div className="text-3xl font-black text-dark">{stat.value}</div>
+                    <div className="text-2xl font-black text-dark">{stat.value}</div>
                     <div className="text-sm text-gray-500">{stat.label}</div>
                   </div>
                 ))}
               </div>
 
               <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
-                <div className="p-4 border-b border-gray-100 bg-gradient-to-l from-primary/5 to-transparent">
+                <div className="p-4 border-b border-gray-100 bg-gradient-to-l from-primary/5 to-transparent flex items-center justify-between">
                   <h3 className="font-bold text-dark">اعضای باشگاه مشتریان</h3>
+                  <div className="flex gap-2">
+                    <button className="text-xs px-3 py-1.5 bg-primary/10 text-primary rounded-lg font-medium">همه</button>
+                    <button className="text-xs px-3 py-1.5 bg-gray-100 text-gray-600 rounded-lg">طلایی</button>
+                    <button className="text-xs px-3 py-1.5 bg-gray-100 text-gray-600 rounded-lg">نقره‌ای</button>
+                  </div>
                 </div>
                 <div className="divide-y divide-gray-100">
                   {customers.map(customer => (
-                    <div key={customer.id} className="flex items-center gap-4 p-4 hover:bg-gray-50 transition-colors">
+                    <div key={customer.id} onClick={() => setShowCustomerDetails(customer.id)} className="flex items-center gap-4 p-4 hover:bg-gray-50 transition-colors cursor-pointer">
                       <div className={`w-12 h-12 rounded-full flex items-center justify-center ${customer.tier === 'طلایی' ? 'bg-gradient-to-br from-amber-400 to-yellow-500' : customer.tier === 'نقره‌ای' ? 'bg-gradient-to-br from-gray-300 to-gray-400' : 'bg-gradient-to-br from-orange-300 to-orange-400'}`}>
                         <span className="text-white font-bold">{customer.name[0]}</span>
                       </div>
@@ -736,10 +763,19 @@ export function AdminDashboard({ navigate }: AdminDashboardProps) {
             <div className="space-y-6">
               <div className="flex items-center justify-between flex-wrap gap-3">
                 <h2 className="text-2xl font-black text-dark">مدیریت کد تخفیف</h2>
-                <button onClick={() => setShowAddCouponModal(true)} className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-l from-primary to-primary-dark text-white rounded-xl text-sm font-bold shadow-lg shadow-primary/20">
-                  <Plus className="w-4 h-4" />
-                  کد تخفیف جدید
-                </button>
+                <div className="flex gap-2">
+                  <button 
+                    onClick={() => exportCouponsToExcel(coupons)}
+                    className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-l from-green-600 to-emerald-600 text-white rounded-xl text-sm font-bold shadow-lg"
+                  >
+                    <Download className="w-4 h-4" />
+                    خروجی
+                  </button>
+                  <button onClick={() => setShowAddCouponModal(true)} className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-l from-primary to-primary-dark text-white rounded-xl text-sm font-bold shadow-lg shadow-primary/20">
+                    <Plus className="w-4 h-4" />
+                    کد تخفیف جدید
+                  </button>
+                </div>
               </div>
 
               <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -782,48 +818,95 @@ export function AdminDashboard({ navigate }: AdminDashboardProps) {
           {activeSection === 'delivery' && (
             <div className="space-y-6">
               <h2 className="text-2xl font-black text-dark">مدیریت ارسال و پیک</h2>
-              <div className="grid sm:grid-cols-3 gap-4">
+              
+              <Carousel height="h-40" autoPlay>
+                <CarouselItem image="https://image.qwenlm.ai/generated-images/50fab5c0-0916-4b5a-a88f-4a42bd0aab3c/_result.png" overlay="gradient">
+                  <div className="flex items-end justify-between w-full">
+                    <div>
+                      <div className="text-white/70 text-xs">پیک‌های فعال</div>
+                      <div className="text-white text-2xl font-black">۸ پیک آنلاین</div>
+                    </div>
+                    <div className="bg-white/20 backdrop-blur-md rounded-xl px-3 py-1.5">
+                      <div className="text-white text-xs">میانگین تحویل</div>
+                      <div className="text-white font-bold">۲۸ دقیقه</div>
+                    </div>
+                  </div>
+                </CarouselItem>
+                <CarouselItem image="https://image.qwenlm.ai/generated-images/3684ff9c-4d63-45e1-90f4-2bf6a74ee5c3/_result.png" overlay="gradient">
+                  <div>
+                    <div className="text-white/70 text-xs">منطقه تحت پوشش</div>
+                    <div className="text-white text-2xl font-black">شعاع ۱۰ کیلومتری</div>
+                  </div>
+                </CarouselItem>
+              </Carousel>
+
+              <div className="grid sm:grid-cols-4 gap-4">
                 {[
                   { label: 'پیک‌های فعال', value: '۸', icon: Truck, gradient: 'from-blue-500 to-cyan-600' },
                   { label: 'سفارش در حال ارسال', value: orders.filter(o => o.status === 'delivering').length.toString(), icon: Package, gradient: 'from-purple-500 to-pink-600' },
                   { label: 'میانگین زمان تحویل', value: '۲۸ دقیقه', icon: Clock, gradient: 'from-green-500 to-emerald-600' },
+                  { label: 'هزینه ارسال', value: '۳۵,۰۰۰', icon: DollarSign, gradient: 'from-orange-500 to-red-600' },
                 ].map((stat, idx) => (
                   <div key={idx} className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm">
                     <div className={`w-12 h-12 rounded-2xl bg-gradient-to-br ${stat.gradient} flex items-center justify-center mb-3 shadow-lg`}>
                       <stat.icon className="w-6 h-6 text-white" />
                     </div>
-                    <div className="text-3xl font-black text-dark">{stat.value}</div>
+                    <div className="text-2xl font-black text-dark">{stat.value}</div>
                     <div className="text-sm text-gray-500">{stat.label}</div>
                   </div>
                 ))}
               </div>
 
-              <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
-                <div className="p-4 border-b border-gray-100 bg-gradient-to-l from-primary/5 to-transparent">
-                  <h3 className="font-bold text-dark">سفارش‌های در حال ارسال</h3>
+              <div className="grid lg:grid-cols-2 gap-6">
+                <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
+                  <div className="p-4 border-b border-gray-100 bg-gradient-to-l from-primary/5 to-transparent">
+                    <h3 className="font-bold text-dark">سفارش‌های در حال ارسال</h3>
+                  </div>
+                  <div className="divide-y divide-gray-100 max-h-96 overflow-y-auto">
+                    {orders.filter(o => o.status === 'delivering').length === 0 ? (
+                      <div className="p-8 text-center text-gray-500">سفارش در حال ارسال وجود ندارد</div>
+                    ) : (
+                      orders.filter(o => o.status === 'delivering').map(order => (
+                        <div key={order.id} className={`p-4 hover:bg-gray-50 cursor-pointer transition-colors ${selectedDelivery === order.id ? 'bg-purple-50' : ''}`} onClick={() => setSelectedDelivery(order.id)}>
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 bg-purple-100 rounded-xl flex items-center justify-center">
+                              <Truck className="w-5 h-5 text-purple-600" />
+                            </div>
+                            <div className="flex-1">
+                              <div className="font-medium text-sm">{order.customer}</div>
+                              <div className="text-xs text-gray-500">{order.address || 'آدرس ثبت نشده'}</div>
+                            </div>
+                            <button 
+                              onClick={(e) => { e.stopPropagation(); updateOrderStatus(order.id, 'delivered'); }}
+                              className="px-3 py-1.5 bg-green-100 text-green-700 rounded-lg text-xs font-bold hover:bg-green-200"
+                            >
+                              تحویل شد
+                            </button>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
                 </div>
-                <div className="divide-y divide-gray-100">
-                  {orders.filter(o => o.status === 'delivering').length === 0 ? (
-                    <div className="p-8 text-center text-gray-500">سفارش در حال ارسال وجود ندارد</div>
-                  ) : (
-                    orders.filter(o => o.status === 'delivering').map(order => (
-                      <div key={order.id} className="flex items-center gap-4 p-4 hover:bg-gray-50">
-                        <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center">
-                          <Truck className="w-6 h-6 text-purple-600" />
-                        </div>
-                        <div className="flex-1">
-                          <div className="font-medium text-sm">{order.customer}</div>
-                          <div className="text-xs text-gray-500">{order.address || 'آدرس ثبت نشده'}</div>
-                        </div>
-                        <button 
-                          onClick={() => updateOrderStatus(order.id, 'delivered')}
-                          className="px-3 py-1.5 bg-green-100 text-green-700 rounded-lg text-xs font-bold hover:bg-green-200"
-                        >
-                          تحویل شد
-                        </button>
+
+                <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
+                  <div className="p-4 border-b border-gray-100 bg-gradient-to-l from-primary/5 to-transparent">
+                    <h3 className="font-bold text-dark">نقشه و ردیابی</h3>
+                  </div>
+                  <div className="p-4">
+                    <div className="h-64 bg-gradient-to-br from-blue-50 to-cyan-50 rounded-xl flex items-center justify-center relative overflow-hidden">
+                      <div className="absolute inset-0 opacity-20">
+                        <div className="absolute top-10 right-10 w-3 h-3 bg-primary rounded-full animate-pulse"></div>
+                        <div className="absolute bottom-20 left-20 w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
+                        <div className="absolute top-1/2 left-1/2 w-3 h-3 bg-purple-500 rounded-full animate-pulse"></div>
                       </div>
-                    ))
-                  )}
+                      <div className="text-center">
+                        <MapPin className="w-12 h-12 text-gray-400 mx-auto mb-2" />
+                        <p className="text-sm text-gray-500">نقشه ردیابی زنده</p>
+                        {selectedDelivery && <p className="text-xs text-primary mt-2">سفارش {selectedDelivery} انتخاب شده</p>}
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -831,8 +914,26 @@ export function AdminDashboard({ navigate }: AdminDashboardProps) {
 
           {activeSection === 'finance' && (
             <div className="space-y-6">
-              <h2 className="text-2xl font-black text-dark">مدیریت مالی</h2>
-              <Carousel height="h-48" autoPlay interval={5000}>
+              <div className="flex items-center justify-between flex-wrap gap-3">
+                <h2 className="text-2xl font-black text-dark">مدیریت مالی</h2>
+                <div className="flex gap-2">
+                  <select 
+                    value={financePeriod} 
+                    onChange={(e) => setFinancePeriod(e.target.value)}
+                    className="px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-primary"
+                  >
+                    <option value="week">هفته جاری</option>
+                    <option value="month">ماه جاری</option>
+                    <option value="year">سال جاری</option>
+                  </select>
+                  <button className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-l from-green-600 to-emerald-600 text-white rounded-xl text-sm font-bold shadow-lg">
+                    <Download className="w-4 h-4" />
+                    گزارش مالی
+                  </button>
+                </div>
+              </div>
+
+              <Carousel height="h-40" autoPlay>
                 <CarouselItem image="https://image.qwenlm.ai/generated-images/01534e96-1a30-4399-896c-8e0fff37aae4/_result.png" overlay="gradient">
                   <div>
                     <div className="text-white/70 text-sm">درآمد این ماه</div>
@@ -847,41 +948,62 @@ export function AdminDashboard({ navigate }: AdminDashboardProps) {
                 </CarouselItem>
               </Carousel>
 
-              <div className="grid sm:grid-cols-3 gap-4">
+              <div className="grid sm:grid-cols-4 gap-4">
                 <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm">
                   <div className="text-sm text-gray-500 mb-2">درآمد ماهانه</div>
-                  <div className="text-2xl font-black text-green-600">۱۸۵,۰۰۰,۰۰۰</div>
+                  <div className="text-2xl font-black text-green-600">۱۸۵M</div>
                   <div className="text-xs text-gray-400">تومان</div>
                 </div>
                 <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm">
                   <div className="text-sm text-gray-500 mb-2">هزینه‌ها</div>
-                  <div className="text-2xl font-black text-red-600">۶۵,۰۰۰,۰۰۰</div>
+                  <div className="text-2xl font-black text-red-600">۶۵M</div>
                   <div className="text-xs text-gray-400">تومان</div>
                 </div>
                 <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm">
                   <div className="text-sm text-gray-500 mb-2">سود خالص</div>
-                  <div className="text-2xl font-black text-primary">۱۲۰,۰۰۰,۰۰۰</div>
+                  <div className="text-2xl font-black text-primary">۱۲۰M</div>
                   <div className="text-xs text-gray-400">تومان</div>
+                </div>
+                <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm">
+                  <div className="text-sm text-gray-500 mb-2">حاشیه سود</div>
+                  <div className="text-2xl font-black text-purple-600">۶۵٪</div>
+                  <div className="text-xs text-gray-400">نسبت به درآمد</div>
                 </div>
               </div>
 
-              <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
-                <h3 className="font-bold text-dark mb-4">تراکنش‌های اخیر</h3>
-                <div className="space-y-3">
-                  {orders.filter(o => o.status === 'delivered').slice(0, 5).map(order => (
-                    <div key={order.id} className="flex items-center justify-between p-3 rounded-xl hover:bg-gray-50">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-green-100 rounded-xl flex items-center justify-center">
-                          <DollarSign className="w-5 h-5 text-green-600" />
+              <div className="grid lg:grid-cols-2 gap-6">
+                <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
+                  <h3 className="font-bold text-dark mb-4">روند درآمد و هزینه</h3>
+                  <ResponsiveContainer width="100%" height={250}>
+                    <ComposedChart data={monthlyData}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                      <XAxis dataKey="month" tick={{ fontSize: 11 }} />
+                      <YAxis tick={{ fontSize: 11 }} />
+                      <Tooltip />
+                      <Bar dataKey="revenue" fill="#10b981" radius={[4, 4, 0, 0]} name="درآمد" />
+                      <Bar dataKey="cost" fill="#ef4444" radius={[4, 4, 0, 0]} name="هزینه" />
+                    </ComposedChart>
+                  </ResponsiveContainer>
+                </div>
+
+                <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
+                  <h3 className="font-bold text-dark mb-4">تراکنش‌های اخیر</h3>
+                  <div className="space-y-3 max-h-64 overflow-y-auto">
+                    {orders.filter(o => o.status === 'delivered').slice(0, 8).map(order => (
+                      <div key={order.id} className="flex items-center justify-between p-3 rounded-xl hover:bg-gray-50">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 bg-green-100 rounded-xl flex items-center justify-center">
+                            <DollarSign className="w-5 h-5 text-green-600" />
+                          </div>
+                          <div>
+                            <div className="font-medium text-sm">{order.customer}</div>
+                            <div className="text-xs text-gray-500">{order.id} • {order.time}</div>
+                          </div>
                         </div>
-                        <div>
-                          <div className="font-medium text-sm">{order.customer}</div>
-                          <div className="text-xs text-gray-500">{order.id} • {order.time}</div>
-                        </div>
+                        <div className="font-bold text-green-600">+{order.total.toLocaleString()}</div>
                       </div>
-                      <div className="font-bold text-green-600">+{order.total.toLocaleString()}</div>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
               </div>
             </div>
@@ -890,7 +1012,8 @@ export function AdminDashboard({ navigate }: AdminDashboardProps) {
           {activeSection === 'marketing' && (
             <div className="space-y-6">
               <h2 className="text-2xl font-black text-dark">بازاریابی و محتوا</h2>
-              <Carousel height="h-48" autoPlay>
+              
+              <Carousel height="h-40" autoPlay>
                 <CarouselItem image="https://image.qwenlm.ai/generated-images/48e98453-6a83-46c1-abab-3354cfa62cf8/_result.png" overlay="gradient">
                   <div>
                     <div className="text-white/70 text-sm">کمپین فعال</div>
@@ -905,7 +1028,7 @@ export function AdminDashboard({ navigate }: AdminDashboardProps) {
                 </CarouselItem>
               </Carousel>
 
-              <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="grid sm:grid-cols-4 gap-4">
                 {[
                   { label: 'بازدید سایت', value: '۱۲,۵۰۰', icon: Eye, gradient: 'from-blue-500 to-indigo-600' },
                   { label: 'نرخ تبدیل', value: '۸.۵٪', icon: Target, gradient: 'from-green-500 to-emerald-600' },
@@ -921,6 +1044,71 @@ export function AdminDashboard({ navigate }: AdminDashboardProps) {
                   </div>
                 ))}
               </div>
+
+              <div className="grid lg:grid-cols-2 gap-6">
+                <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
+                  <h3 className="font-bold text-dark mb-4 flex items-center gap-2">
+                    <Sparkles className="w-5 h-5 text-primary" />
+                    کمپین‌های فعال
+                  </h3>
+                  <div className="space-y-3">
+                    {[
+                      { name: 'تخفیف تابستانه', status: 'فعال', reach: '۵,۲۰۰ نفر', conversion: '۱۲٪' },
+                      { name: 'معرفی به دوستان', status: 'فعال', reach: '۱,۸۰۰ نفر', conversion: '۲۳٪' },
+                      { name: 'بازگشت مشتریان', status: 'پایان یافته', reach: '۳,۴۰۰ نفر', conversion: '۸٪' },
+                    ].map((campaign, idx) => (
+                      <div key={idx} className="p-4 bg-gray-50 rounded-xl">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="font-bold text-sm">{campaign.name}</span>
+                          <span className={`text-xs px-2 py-0.5 rounded-full ${campaign.status === 'فعال' ? 'bg-green-100 text-green-700' : 'bg-gray-200 text-gray-600'}`}>{campaign.status}</span>
+                        </div>
+                        <div className="grid grid-cols-2 gap-2 text-xs text-gray-600">
+                          <div>دسترسی: <span className="font-bold">{campaign.reach}</span></div>
+                          <div>نرخ تبدیل: <span className="font-bold">{campaign.conversion}</span></div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <button className="w-full mt-4 py-2.5 border-2 border-dashed border-primary/30 text-primary rounded-xl text-sm font-medium hover:bg-primary/5 transition-colors">
+                    ایجاد کمپین جدید
+                  </button>
+                </div>
+
+                <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
+                  <h3 className="font-bold text-dark mb-4 flex items-center gap-2">
+                    <Mail className="w-5 h-5 text-primary" />
+                    پیام‌های ارسالی
+                  </h3>
+                  <div className="space-y-3">
+                    {[
+                      { type: 'پیامک', sent: 1250, delivered: 1180, read: 890 },
+                      { type: 'ایمیل', sent: 2345, delivered: 2200, read: 1560 },
+                      { type: 'اعلان درون‌برنامه‌ای', sent: 3400, delivered: 3400, read: 2100 },
+                    ].map((msg, idx) => (
+                      <div key={idx} className="p-4 bg-gray-50 rounded-xl">
+                        <div className="font-bold text-sm mb-2">{msg.type}</div>
+                        <div className="grid grid-cols-3 gap-2 text-xs">
+                          <div className="text-center">
+                            <div className="font-black text-lg">{msg.sent.toLocaleString()}</div>
+                            <div className="text-gray-500">ارسال شده</div>
+                          </div>
+                          <div className="text-center">
+                            <div className="font-black text-lg text-green-600">{msg.delivered.toLocaleString()}</div>
+                            <div className="text-gray-500">تحویل شده</div>
+                          </div>
+                          <div className="text-center">
+                            <div className="font-black text-lg text-primary">{msg.read.toLocaleString()}</div>
+                            <div className="text-gray-500">مشاهده شده</div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <button className="w-full mt-4 py-2.5 border-2 border-dashed border-primary/30 text-primary rounded-xl text-sm font-medium hover:bg-primary/5 transition-colors">
+                    ارسال پیام جدید
+                  </button>
+                </div>
+              </div>
             </div>
           )}
 
@@ -928,83 +1116,86 @@ export function AdminDashboard({ navigate }: AdminDashboardProps) {
             <div className="space-y-6">
               <h2 className="text-2xl font-black text-dark">تنظیمات</h2>
               
-              <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
-                <h3 className="font-bold text-dark mb-4 flex items-center gap-2">
-                  <Globe className="w-5 h-5 text-primary" />
-                  اطلاعات رستوران
-                </h3>
-                <div className="grid sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="text-sm font-medium text-gray-700 mb-1 block">نام رستوران</label>
-                    <input 
-                      type="text" 
-                      value={restaurantInfo.name}
-                      onChange={(e) => updateRestaurantInfo({ name: e.target.value })}
-                      className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-gray-700 mb-1 block">نوع آشپزی</label>
-                    <input 
-                      type="text" 
-                      value={restaurantInfo.type}
-                      onChange={(e) => updateRestaurantInfo({ type: e.target.value })}
-                      className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-gray-700 mb-1 block">تلفن</label>
-                    <input 
-                      type="text" 
-                      value={restaurantInfo.phone}
-                      onChange={(e) => updateRestaurantInfo({ phone: e.target.value })}
-                      className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-gray-700 mb-1 block">زمان تحویل</label>
-                    <input 
-                      type="text" 
-                      value={restaurantInfo.deliveryTime}
-                      onChange={(e) => updateRestaurantInfo({ deliveryTime: e.target.value })}
-                      className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
-                    />
-                  </div>
-                  <div className="sm:col-span-2">
-                    <label className="text-sm font-medium text-gray-700 mb-1 block">آدرس</label>
-                    <input 
-                      type="text" 
-                      value={restaurantInfo.address}
-                      onChange={(e) => updateRestaurantInfo({ address: e.target.value })}
-                      className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
-                    />
-                  </div>
-                  <div className="sm:col-span-2">
-                    <label className="text-sm font-medium text-gray-700 mb-1 block">وضعیت رستوران</label>
-                    <button 
-                      onClick={() => updateRestaurantInfo({ isOpen: !restaurantInfo.isOpen })}
-                      className={`px-6 py-2.5 rounded-xl font-bold text-sm ${restaurantInfo.isOpen ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}
-                    >
-                      {restaurantInfo.isOpen ? 'باز' : 'بسته'}
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-              <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
-                <h3 className="font-bold text-dark mb-4 flex items-center gap-2">
-                  <Shield className="w-5 h-5 text-primary" />
-                  امنیت و دسترسی
-                </h3>
-                <div className="space-y-3">
-                  {['ورود دو مرحله‌ای', 'اعلان‌های ایمیلی', 'پشتیبان‌گیری خودکار', 'لاگ فعالیت‌ها'].map((item, idx) => (
-                    <div key={idx} className="flex items-center justify-between p-3 bg-gray-50 rounded-xl">
-                      <span className="text-sm font-medium">{item}</span>
-                      <button className="relative w-10 h-5 bg-green-500 rounded-full">
-                        <div className="absolute top-0.5 right-0.5 w-4 h-4 bg-white rounded-full shadow"></div>
+              <div className="grid lg:grid-cols-2 gap-6">
+                <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
+                  <h3 className="font-bold text-dark mb-4 flex items-center gap-2">
+                    <Globe className="w-5 h-5 text-primary" />
+                    اطلاعات رستوران
+                  </h3>
+                  <div className="space-y-3">
+                    <div>
+                      <label className="text-sm font-medium text-gray-700 mb-1 block">نام رستوران</label>
+                      <input type="text" value={restaurantInfo.name} onChange={(e) => updateRestaurantInfo({ name: e.target.value })} className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20" />
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-gray-700 mb-1 block">نوع آشپزی</label>
+                      <input type="text" value={restaurantInfo.type} onChange={(e) => updateRestaurantInfo({ type: e.target.value })} className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20" />
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-gray-700 mb-1 block">تلفن</label>
+                      <input type="text" value={restaurantInfo.phone} onChange={(e) => updateRestaurantInfo({ phone: e.target.value })} className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20" />
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-gray-700 mb-1 block">زمان تحویل</label>
+                      <input type="text" value={restaurantInfo.deliveryTime} onChange={(e) => updateRestaurantInfo({ deliveryTime: e.target.value })} className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20" />
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-gray-700 mb-1 block">آدرس</label>
+                      <input type="text" value={restaurantInfo.address} onChange={(e) => updateRestaurantInfo({ address: e.target.value })} className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20" />
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-gray-700 mb-1 block">وضعیت رستوران</label>
+                      <button onClick={() => updateRestaurantInfo({ isOpen: !restaurantInfo.isOpen })} className={`px-6 py-2.5 rounded-xl font-bold text-sm ${restaurantInfo.isOpen ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                        {restaurantInfo.isOpen ? 'باز' : 'بسته'}
                       </button>
                     </div>
-                  ))}
+                  </div>
+                </div>
+
+                <div className="space-y-6">
+                  <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
+                    <h3 className="font-bold text-dark mb-4 flex items-center gap-2">
+                      <Shield className="w-5 h-5 text-primary" />
+                      امنیت و دسترسی
+                    </h3>
+                    <div className="space-y-3">
+                      {[
+                        { label: 'ورود دو مرحله‌ای', enabled: true },
+                        { label: 'اعلان‌های ایمیلی', enabled: true },
+                        { label: 'پشتیبان‌گیری خودکار', enabled: true },
+                        { label: 'لاگ فعالیت‌ها', enabled: true },
+                      ].map((item, idx) => (
+                        <div key={idx} className="flex items-center justify-between p-3 bg-gray-50 rounded-xl">
+                          <span className="text-sm font-medium">{item.label}</span>
+                          <button className={`relative w-10 h-5 rounded-full ${item.enabled ? 'bg-green-500' : 'bg-gray-300'}`}>
+                            <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-all ${item.enabled ? 'right-0.5' : 'right-5'}`}></div>
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
+                    <h3 className="font-bold text-dark mb-4 flex items-center gap-2">
+                      <Link2 className="w-5 h-5 text-primary" />
+                      یکپارچه‌سازی
+                    </h3>
+                    <div className="space-y-3">
+                      {[
+                        { label: 'درگاه پرداخت زرین‌پال', connected: true },
+                        { label: 'SMS Panel', connected: true },
+                        { label: 'Google Maps API', connected: false },
+                        { label: 'POS System', connected: false },
+                      ].map((item, idx) => (
+                        <div key={idx} className="flex items-center justify-between p-3 bg-gray-50 rounded-xl">
+                          <span className="text-sm font-medium">{item.label}</span>
+                          <span className={`text-xs px-2 py-1 rounded-full font-bold ${item.connected ? 'bg-green-100 text-green-700' : 'bg-gray-200 text-gray-600'}`}>
+                            {item.connected ? 'متصل' : 'اتصال'}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -1012,7 +1203,7 @@ export function AdminDashboard({ navigate }: AdminDashboardProps) {
         </div>
       </main>
 
-      {/* Add Menu Item Modal */}
+      {/* Modals */}
       {showAddItemModal && (
         <Modal title="افزودن آیتم جدید به منو" onClose={() => setShowAddItemModal(false)}>
           <div className="space-y-4">
@@ -1052,7 +1243,6 @@ export function AdminDashboard({ navigate }: AdminDashboardProps) {
         </Modal>
       )}
 
-      {/* Edit Menu Item Modal */}
       {showEditItemModal && (() => {
         const item = menuItems.find(i => i.id === showEditItemModal);
         if (!item) return null;
@@ -1087,7 +1277,6 @@ export function AdminDashboard({ navigate }: AdminDashboardProps) {
         );
       })()}
 
-      {/* Add Reservation Modal */}
       {showAddResModal && (
         <Modal title="رزرو جدید" onClose={() => setShowAddResModal(false)}>
           <div className="space-y-4">
@@ -1124,7 +1313,6 @@ export function AdminDashboard({ navigate }: AdminDashboardProps) {
         </Modal>
       )}
 
-      {/* Add Coupon Modal */}
       {showAddCouponModal && (
         <Modal title="کد تخفیف جدید" onClose={() => setShowAddCouponModal(false)}>
           <div className="space-y-4">
@@ -1160,7 +1348,6 @@ export function AdminDashboard({ navigate }: AdminDashboardProps) {
         </Modal>
       )}
 
-      {/* Settings Modal */}
       {showSettingsModal && (
         <Modal title="تنظیمات سریع" onClose={() => setShowSettingsModal(false)}>
           <div className="space-y-4">
@@ -1186,16 +1373,56 @@ export function AdminDashboard({ navigate }: AdminDashboardProps) {
           </div>
         </Modal>
       )}
+
+      {showCustomerDetails && (() => {
+        const customer = customers.find(c => c.id === showCustomerDetails);
+        if (!customer) return null;
+        return (
+          <Modal title="جزئیات مشتری" onClose={() => setShowCustomerDetails(null)}>
+            <div className="space-y-4">
+              <div className="text-center py-4">
+                <div className={`w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-3 ${customer.tier === 'طلایی' ? 'bg-gradient-to-br from-amber-400 to-yellow-500' : customer.tier === 'نقره‌ای' ? 'bg-gradient-to-br from-gray-300 to-gray-400' : 'bg-gradient-to-br from-orange-300 to-orange-400'}`}>
+                  <span className="text-white text-2xl font-bold">{customer.name[0]}</span>
+                </div>
+                <h3 className="font-black text-lg">{customer.name}</h3>
+                <p className="text-sm text-gray-500">{customer.phone}</p>
+                <span className={`inline-block mt-2 text-xs px-3 py-1 rounded-full font-bold ${customer.tier === 'طلایی' ? 'bg-amber-100 text-amber-700' : customer.tier === 'نقره‌ای' ? 'bg-gray-100 text-gray-700' : 'bg-orange-100 text-orange-700'}`}>{customer.tier}</span>
+              </div>
+              <div className="grid grid-cols-3 gap-3">
+                <div className="bg-gray-50 rounded-xl p-3 text-center">
+                  <div className="text-xl font-black">{customer.orders}</div>
+                  <div className="text-xs text-gray-500">سفارش</div>
+                </div>
+                <div className="bg-gray-50 rounded-xl p-3 text-center">
+                  <div className="text-xl font-black">{customer.points}</div>
+                  <div className="text-xs text-gray-500">امتیاز</div>
+                </div>
+                <div className="bg-gray-50 rounded-xl p-3 text-center">
+                  <div className="text-xl font-black">{(customer.spent / 1000000).toFixed(1)}M</div>
+                  <div className="text-xs text-gray-500">خرید (تومان)</div>
+                </div>
+              </div>
+              <div className="bg-gray-50 rounded-xl p-4">
+                <div className="text-sm font-medium mb-2">تاریخ عضویت</div>
+                <div className="text-sm text-gray-600">{customer.joinedAt}</div>
+              </div>
+              <div className="flex gap-2">
+                <button className="flex-1 py-2.5 bg-primary/10 text-primary rounded-xl text-sm font-bold">ارسال پیام</button>
+                <button className="flex-1 py-2.5 bg-green-100 text-green-700 rounded-xl text-sm font-bold">اعطای تخفیف</button>
+              </div>
+            </div>
+          </Modal>
+        );
+      })()}
     </div>
   );
 }
 
-// Modal Component
 function Modal({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
   return (
     <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="bg-white w-full max-w-md rounded-3xl shadow-2xl overflow-hidden">
-        <div className="p-5 border-b border-gray-100 flex items-center justify-between bg-gradient-to-l from-primary/5 to-transparent">
+      <div className="bg-white w-full max-w-md rounded-3xl shadow-2xl overflow-hidden max-h-[90vh] overflow-y-auto">
+        <div className="p-5 border-b border-gray-100 flex items-center justify-between bg-gradient-to-l from-primary/5 to-transparent sticky top-0">
           <h3 className="text-lg font-black text-dark">{title}</h3>
           <button onClick={onClose} className="p-1 hover:bg-gray-100 rounded-lg">
             <X className="w-5 h-5 text-gray-500" />
